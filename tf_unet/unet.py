@@ -523,7 +523,8 @@ def error_rate(predictions, labels):
     """
     Return the error rate based on dense predictions and 1-hot labels.
     """
-    labels = util.crop_to_shape(labels, predictions.shape)
+    if labels.shape[1] != predictions.shape[1]:
+        labels = util.crop_to_shape(labels, predictions.shape)
     return 100.0 - (
             100.0 *
             np.sum(np.argmax(predictions, 3) == np.argmax(labels, 3)) /
@@ -536,7 +537,8 @@ def dice(predictions, labels, classes=None):
         classes = range(predictions.shape[3])
     if type(classes)==int:
         classes = [classes]
-    labels = util.crop_to_shape(labels, predictions.shape)
+    if labels.shape[1] != predictions.shape[1]:
+        labels = util.crop_to_shape(labels, predictions.shape)
     for i in classes:
         gt   = np.argmax(predictions, 3) == i
         pred = np.argmax(labels, 3) == i
