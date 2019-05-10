@@ -437,7 +437,19 @@ class Trainer(object):
                     batch_x, batch_y = data_provider(self.batch_size)
 
                     # Run optimization op (backprop)
-                    _, loss, lr, gradients = sess.run(
+                    if step % display_step == 0:
+                        summary_str, _, loss, acc, lr, gradients, predictions = sess.run((self.summary_op, 
+                                                                                        self.optimizer, 
+                                                                                        self.net.cost, 
+                                                                                        self.net.accuracy, 
+                                                                                        self.learning_rate_node, 
+                                                                                        self.net.gradients_node, 
+                                                                                        self.net.predicter),
+                                                                                        feed_dict={self.net.x: batch_x,
+                                                                                        self.net.y: util.crop_to_shape(batch_y, pred_shape),
+                                                                                        self.net.keep_prob: dropout})
+                    else:
+                        _, loss, lr, gradients = sess.run(
                         (self.optimizer, self.net.cost, self.learning_rate_node, self.net.gradients_node),
                         feed_dict={self.net.x: batch_x,
                                    self.net.y: util.crop_to_shape(batch_y, pred_shape),
@@ -449,8 +461,14 @@ class Trainer(object):
                         self.norm_gradients_node.assign(norm_gradients).eval()
 
                     if step % display_step == 0:
-                        self.output_minibatch_stats(sess, summary_writer, step, batch_x,
-                                                    util.crop_to_shape(batch_y, pred_shape))
+                        summary_writer.add_summary(summary_str, step)
+                        summary_writer.flush()
+                        logging.info(
+                            "Iter {:}, Batch Loss= {:.4f}, Train Acc= {:.4f}, Batch error= {:.1f}%, dice={}".format(
+                            step, loss, acc,
+                            error_rate(predictions, batch_y),
+                            dice(predictions, batch_y),
+                        ))
 
                     total_loss += loss
 
@@ -498,7 +516,7 @@ class Trainer(object):
                                                         self.net.predicter],
                                                         feed_dict={self.net.x: batch_x,
                                                                   self.net.y: batch_y,
-                                                                  self.net.keep_prob: 1.})
+                                                                  self.net.keep_prob: 1.})        
         summary_writer.add_summary(summary_str, step)
         summary_writer.flush()
         logging.info(
